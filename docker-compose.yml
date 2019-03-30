@@ -1,0 +1,29 @@
+version: '3'
+services:
+  ecommerce-backend:
+    build: .
+    ports:
+      - "9091:9090"
+    networks:
+      - ecommerce-network
+    volumes:
+      - ./app/init.go:/go/src/github.com/shredx/ep2-golang-graphql-backend/app/init.go
+      - ./app/models:/go/src/github.com/shredx/ep2-golang-graphql-backend/app/models
+      - ./app/controllers:/go/src/github.com/shredx/ep2-golang-graphql-backend/app/controllers
+      - ./app/views:/go/src/github.com/shredx/ep2-golang-graphql-backend/app/views
+      - ./conf:/go/src/github.com/shredx/ep2-golang-graphql-backend/conf
+      - ./vendor:/go/src/github.com/shredx/ep2-golang-graphql-backend/vendor
+    links:
+      - "ecommerce-mysql:ecommerce-mysql"
+
+  ecommerce-mysql:
+    hostname: ecommerce-mysql
+    image: mysql
+    networks:
+      - ecommerce-network
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+
+networks:
+  ecommerce-network:
+    driver: bridge
