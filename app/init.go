@@ -87,6 +87,10 @@ func InitDB() {
 	models.DB = Db
 
 	//automigrating the tables
+	models.DB.AutoMigrate(&models.User{})
+	models.DB.AutoMigrate(&models.Review{})
+	models.DB.AutoMigrate(&models.Tag{})
+	models.DB.AutoMigrate(&models.Product{})
 }
 
 //StartGraphQL service will start the graphql server

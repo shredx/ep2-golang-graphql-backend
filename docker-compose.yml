@@ -3,7 +3,7 @@ services:
   ecommerce-backend:
     build: .
     ports:
-      - "9091:9090"
+      - "9090:9090"
     networks:
       - ecommerce-network
     volumes:

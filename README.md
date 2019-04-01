@@ -1,43 +1,38 @@
-# Welcome to Revel
+# Episode 2 Golang GraphQL Backend
+This is a simple backend for an e-commerce platform with API endpoint implemented in GraphQL
+This server is built on top of the [graphql-go implmentation](https://github.com/graphql-go/graphql)
 
-A high-productivity web framework for the [Go language](http://www.golang.org/).
+## Getting Started
 
+### Prerequisite
+* [Go](https://golang.org/doc/install) -- Development environment
+* [dep](https://golang.github.io/dep/docs/installation.html) -- Dependency management
+* [Docker](https://www.docker.com/products/docker-desktop)
+* [Docker Compose](https://docs.docker.com/compose/install/)
 
-### Start the web server:
+### Installation
+#### Setting up the environment
+```sh
+go get -u github.com/shredx/ep2-golang-graphql-backend
+cd $GOPATH/github.com/shredx/ep2-golang-graphql-backend
+dep ensure
+docker-compose up
+```
+#### Configuring a database
+ To know the name of the container run the following command
+ ```sh
+ docker ps
+ ```
+ As per docker compose configuration name of the docker container should be `ep2-golang-graphql-backend_ecommerce-mysql_1`
 
-   revel run myapp
+Login into the mysql created in the docker.
+```sh
+docker exec -it ep2-golang-graphql-backend_ecommerce-mysql_1 mysql -uroot -proot
+```
+Now create the database called `ecommerce`
+```sql
+create database ecommerce;
+```
 
-### Go to http://localhost:9000/ and you'll see:
-
-    "It works"
-
-## Code Layout
-
-The directory structure of a generated Revel application:
-
-    conf/             Configuration directory
-        app.conf      Main app configuration file
-        routes        Routes definition file
-
-    app/              App sources
-        init.go       Interceptor registration
-        controllers/  App controllers go here
-        views/        Templates directory
-
-    messages/         Message files
-
-    public/           Public static assets
-        css/          CSS files
-        js/           Javascript files
-        images/       Image files
-
-    tests/            Test suites
-
-
-## Help
-
-* The [Getting Started with Revel](http://revel.github.io/tutorial/gettingstarted.html).
-* The [Revel guides](http://revel.github.io/manual/index.html).
-* The [Revel sample apps](http://revel.github.io/examples/index.html).
-* The [API documentation](https://godoc.org/github.com/revel/revel).
-
+### Usage
+Follow the [usage doc](./Usage.md)
