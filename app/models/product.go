@@ -23,7 +23,7 @@ type Product struct {
 	Reviews []Review `gorm:"many2many:product_reviews;"`
 }
 
-//ProductConfig is the config for the product interface
+//ProductConfig is the config for the product object
 var ProductConfig = graphql.ObjectConfig{
 	Name: "Product",
 	Fields: graphql.Fields{

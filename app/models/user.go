@@ -78,12 +78,7 @@ var ReadUser = &graphql.Field{
 var ReadUsers = &graphql.Field{
 	Type:        graphql.NewList(UserSchema), // the return type for this field
 	Description: "Get a single user",
-	Args: graphql.FieldConfigArgument{
-		"ID": &graphql.ArgumentConfig{
-			Type: graphql.Int,
-		},
-	},
-	Resolve: ReadUserResolve,
+	Resolve:     ReadUserResolve,
 }
 
 //CreateUser for creating a user

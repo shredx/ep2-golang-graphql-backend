@@ -1,6 +1,8 @@
 package models
 
-import "github.com/graphql-go/graphql"
+import (
+	"github.com/graphql-go/graphql"
+)
 
 //Schema is the graphql schema
 var Schema graphql.Schema
@@ -33,6 +35,14 @@ var QueryConfig = graphql.ObjectConfig{
 		 * curl -g 'http://localhost:9090/graphql?query={Product(ID:1){ID,Name,Brand}}'
 		 */
 		"Product": ReadProduct,
+		/*
+		 * curl -g 'http://localhost:9090/graphql?query={Category(ID:1){ID,Name,Description}}'
+		 */
+		"Category": ReadCategory,
+		/*
+		 * curl -g 'http://localhost:9090/graphql?query={Categories{ID,Name,Description}}'
+		 */
+		"Categories": ReadCategories,
 	},
 }
 
@@ -68,6 +78,14 @@ var MutationConfig = graphql.ObjectConfig{
 		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{ProductReview(ID:1,Review:"Good%20Product",Rating:4,Add:true){ID,Name,Reviews{Review,Rating}}}'
 		 */
 		"ProductReview": ProductReview,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateCategory(Name:"Electronics"){ID,Name}}'
+		 */
+		"CreateCategory": CreateCategory,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateCategory(ID:1,Name:"Computers%20Gadgets"){ID,Name}}'
+		 */
+		"UpdateCategory": UpdateCategory,
 	},
 }
 
@@ -78,6 +96,7 @@ func init() {
 	 */
 	//Model initializations
 	InitProduct()
+	InitCategories()
 
 	//Set the query and mutations
 	query := graphql.NewObject(QueryConfig)
