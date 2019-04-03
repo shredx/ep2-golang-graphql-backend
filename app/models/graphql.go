@@ -16,7 +16,7 @@ var QueryConfig = graphql.ObjectConfig{
 		 */
 		"User": ReadUser,
 		/*
-		 * curl -g 'http://localhost:9090/graphql?query={User{Number,Name}}'
+		 * curl -g 'http://localhost:9090/graphql?query={Users{Number,Name}}'
 		 */
 		"Users": ReadUsers,
 		/*
@@ -43,6 +43,14 @@ var QueryConfig = graphql.ObjectConfig{
 		 * curl -g 'http://localhost:9090/graphql?query={Categories{ID,Name,Description}}'
 		 */
 		"Categories": ReadCategories,
+		/*
+		 * curl -g 'http://localhost:9090/graphql?query={Order{ID:1}{ID,Name,Total}}'
+		 */
+		"Order": ReadOrder,
+		/*
+		 * curl -g 'http://localhost:9090/graphql?query={Item{ID:101}{ID,Product{Name},Price}}'
+		 */
+		"Item": ReadItem,
 	},
 }
 
@@ -55,7 +63,7 @@ var MutationConfig = graphql.ObjectConfig{
 		 */
 		"CreateUser": CreateUser,
 		/*
-		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateUser(ID:1,Number:"9999990000",Name:"New Tester",Password:"test"){Name}}'
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateUser(ID:1,Name:"New Tester",Password:"test"){Name}}'
 		 */
 		"UpdateUser": UpdateUser,
 		/*
@@ -86,6 +94,22 @@ var MutationConfig = graphql.ObjectConfig{
 		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateCategory(ID:1,Name:"Computers%20Gadgets"){ID,Name}}'
 		 */
 		"UpdateCategory": UpdateCategory,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateOrder(Name:"Order1"){ID,Name}}'
+		 */
+		"CreateOrder": CreateOrder,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateOrder(ID:111,Name:"Order1",AddItem:101){ID,Name,Items{ID}}}'
+		 */
+		"UpdateOrder": UpdateOrder,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateItem(Product:1,Price:300,Qty:2){ID,Price,Qty}}'
+		 */
+		"CreateItem": CreateItem,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateItem(ID:111,Price:"400"){ID,Product{Name},Price}}'
+		 */
+		"UpdateItem": UpdateItem,
 	},
 }
 

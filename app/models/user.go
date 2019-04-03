@@ -10,10 +10,12 @@ import (
 
 //User is the model of the user
 type User struct {
-	ID       uint   `gorm:"primary_key"` //ID of the user
-	Number   string //Number is the mobile number of the user
-	Password string //Password is the password the user
-	Name     string //Name is the display name of the user
+	ID       uint    `gorm:"primary_key"` //ID of the user
+	Number   string  //Number is the mobile number of the user
+	Password string  //Password is the password the user
+	Name     string  //Name is the display name of the user
+	Cart     Cart    `gorm:"foreign_key:UserID"` //This is the current cart of the user
+	Orders   []Order `gorm:"foreign_key:UserID"` //Orders given by this user
 }
 
 //UserConfig is the object config for user
@@ -32,6 +34,12 @@ var UserConfig = graphql.ObjectConfig{
 		"Name": &graphql.Field{
 			Type: graphql.String,
 		},
+		"Cart": &graphql.Field{
+			Type: graphql.NewNonNull(CartSchema),
+		},
+		"Orders": &graphql.Field{
+			Type: graphql.NewList(OrderSchema),
+		},
 	},
 }
 
@@ -47,13 +55,18 @@ var ReadUserResolve = func(params graphql.ResolveParams) (interface{}, error) {
 
 	if !ok {
 		//return all the users
-		var users []User
+		users := []User{}
 		DB.Find(&users)
+		for i := 0; i < len(users); i++ {
+			DB.Find(&users[i]).Related(&user.Cart, "Cart").Related(&user.Orders, "Orders")
+			//Emptying the password
+			users[i].Password = ""
+		}
 		return users, nil
 	}
 
 	//finding the user from the db
-	DB.First(&user)
+	DB.First(&user).Related(&user.Cart, "Cart").Related(&user.Orders, "Orders")
 
 	//Emptying the password
 	user.Password = ""
@@ -77,7 +90,7 @@ var ReadUser = &graphql.Field{
 //ReadUsers will read a user
 var ReadUsers = &graphql.Field{
 	Type:        graphql.NewList(UserSchema), // the return type for this field
-	Description: "Get a single user",
+	Description: "Get all users",
 	Resolve:     ReadUserResolve,
 }
 
@@ -120,7 +133,7 @@ var CreateUser = &graphql.Field{
 	},
 }
 
-//UpdateUser for creating a user
+//UpdateUser for updating a user
 var UpdateUser = &graphql.Field{
 	Type:        UserSchema, // the return type for this field
 	Description: "Update existing user",
@@ -129,7 +142,7 @@ var UpdateUser = &graphql.Field{
 			Type: graphql.NewNonNull(graphql.Int),
 		},
 		"Number": &graphql.ArgumentConfig{
-			Type: graphql.NewNonNull(graphql.String),
+			Type: graphql.String,
 		},
 		"Password": &graphql.ArgumentConfig{
 			Type: graphql.NewNonNull(graphql.String),
@@ -137,23 +150,61 @@ var UpdateUser = &graphql.Field{
 		"Name": &graphql.ArgumentConfig{
 			Type: graphql.NewNonNull(graphql.String),
 		},
+		"AddOrder": &graphql.ArgumentConfig{
+			Type: graphql.Int,
+		},
+		"RemoveOrder": &graphql.ArgumentConfig{
+			Type: graphql.Int,
+		},
 	},
 	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 
 		// marshall and cast the argument value
 		id, _ := params.Args["ID"].(int)
-		number, _ := params.Args["Number"].(string)
+		number, okn := params.Args["Number"]
 		password, _ := params.Args["Password"].(string)
 		name, _ := params.Args["Name"].(string)
+		addOrder, okao := params.Args["AddOrder"]
+		removeOrder, okro := params.Args["RemoveOrder"]
 
 		// perform mutation operation here
 		// for e.g. update the user and save to DB.
+		// will get the User from db
+		// update the fields and update in the db
 		user := User{
 			ID:       uint(id),
-			Number:   number,
 			Password: password,
 			Name:     name,
 		}
+
+		if okn {
+			user.Number = number.(string)
+		}
+
+		//Getting the list of Orders
+		orders := []Order{}
+		DB.Model(&user).Related(&orders, "Orders")
+		user.Orders = orders
+
+		if okao {
+			o := Order{ID: uint(addOrder.(int))}
+			DB.First(&o)
+			user.Orders = append(user.Orders, o)
+		}
+
+		if okro {
+			o := Order{ID: uint(removeOrder.(int))}
+			for i := len(user.Orders) - 1; i >= 0; i++ {
+				if user.Orders[i].ID != o.ID {
+					continue
+				}
+				copy(user.Orders[i:], user.Orders[i+1:])
+				user.Orders = user.Orders[:len(user.Orders)-1]
+				DB.Model(&user).Association("Orders").Delete(&o)
+				break
+			}
+		}
+
 		DB.Update(&user)
 
 		//Emptying the password

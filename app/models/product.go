@@ -21,6 +21,7 @@ type Product struct {
 	Image string  //Image url of the product
 	//Reviews given to this product
 	Reviews []Review `gorm:"many2many:product_reviews;"`
+	ItemID  uint     // foreign_key for Item.Product
 }
 
 //ProductConfig is the config for the product object
@@ -142,7 +143,7 @@ var CreateProduct = &graphql.Field{
 	},
 }
 
-//UpdateProduct for creating a Product
+//UpdateProduct for updating a Product
 var UpdateProduct = &graphql.Field{
 	Type:        ProductSchema, // the return type for this field
 	Description: "Update existing Product",
