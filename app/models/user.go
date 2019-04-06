@@ -1,8 +1,6 @@
 package models
 
 import (
-	"fmt"
-
 	"github.com/graphql-go/graphql"
 )
 
@@ -55,23 +53,36 @@ var ReadUserResolve = func(params graphql.ResolveParams) (interface{}, error) {
 	id, ok := params.Args["ID"].(int)
 	user := User{ID: uint(id)}
 
-	//Getting the Items in Cart
-	DB.First(&user.Cart).Related(&user.Cart.Items, "Items")
-
 	if !ok {
 		//return all the users
 		users := []User{}
 		DB.Find(&users)
 		for i := 0; i < len(users); i++ {
-			DB.Find(&users[i]).Related(&user.Cart, "Cart").Related(&user.Orders, "Orders")
+			DB.Find(&users[i]).Related(&users[i].Cart, "Cart").Related(&users[i].Orders, "Orders")
 			//Emptying the password
 			users[i].Password = ""
 
 			//Getting the Items in Cart
 			cart := Cart{ID: users[i].Cart.ID}
 			DB.First(&cart).Related(&cart.Items, "Items")
-			fmt.Println(cart)
 			users[i].Cart.Items = cart.Items
+			for j := 0; j < len(users[i].Cart.Items); j++ {
+				item := Item{ID: users[i].Cart.Items[j].ID}
+				DB.First(&item).Related(&item.Product, "Product")
+				users[i].Cart.Items[j].Product = item.Product
+			}
+
+			//Getting Items in the Orders
+			for k := 0; k < len(users[i].Orders); i++ {
+				order := Order{ID: users[i].Orders[k].ID}
+				DB.First(&order).Related(&order.Items, "Items")
+				users[i].Orders[k].Items = order.Items
+				for l := 0; l < len(users[i].Orders[k].Items); l++ {
+					item := Item{ID: users[i].Orders[k].Items[l].ID}
+					DB.First(&item).Related(&item.Product, "Product")
+					users[i].Orders[k].Items[l].Product = item.Product
+				}
+			}
 		}
 
 		return users, nil
@@ -79,6 +90,22 @@ var ReadUserResolve = func(params graphql.ResolveParams) (interface{}, error) {
 
 	//finding the user from the db
 	DB.First(&user).Related(&user.Cart, "Cart").Related(&user.Orders, "Orders")
+	//Getting the Items in Cart
+	DB.First(&user.Cart).Related(&user.Cart.Items, "Items")
+	for i := 0; i < len(user.Cart.Items); i++ {
+		item := Item{ID: user.Cart.Items[i].ID}
+		DB.First(&item).Related(&item.Product, "Product")
+		user.Cart.Items[i].Product = item.Product
+	}
+	//Getting Items in the Orders
+	for i := 0; i < len(user.Orders); i++ {
+		DB.First(&user.Orders[i]).Related(&user.Orders[i].Items, "Items")
+		for j := 0; j < len(user.Orders[i].Items); j++ {
+			item := Item{ID: user.Orders[i].Items[j].ID}
+			DB.First(&item).Related(&item.Product, "Product")
+			user.Orders[i].Items[i].Product = item.Product
+		}
+	}
 
 	//Emptying the password
 	user.Password = ""
