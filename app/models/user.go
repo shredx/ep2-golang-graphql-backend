@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+
 	"github.com/graphql-go/graphql"
 )
 
@@ -35,7 +37,7 @@ var UserConfig = graphql.ObjectConfig{
 			Type: graphql.String,
 		},
 		"Cart": &graphql.Field{
-			Type: graphql.NewNonNull(CartSchema),
+			Type: CartSchema,
 		},
 		"Orders": &graphql.Field{
 			Type: graphql.NewList(OrderSchema),
@@ -53,6 +55,9 @@ var ReadUserResolve = func(params graphql.ResolveParams) (interface{}, error) {
 	id, ok := params.Args["ID"].(int)
 	user := User{ID: uint(id)}
 
+	//Getting the Items in Cart
+	DB.First(&user.Cart).Related(&user.Cart.Items, "Items")
+
 	if !ok {
 		//return all the users
 		users := []User{}
@@ -61,7 +66,14 @@ var ReadUserResolve = func(params graphql.ResolveParams) (interface{}, error) {
 			DB.Find(&users[i]).Related(&user.Cart, "Cart").Related(&user.Orders, "Orders")
 			//Emptying the password
 			users[i].Password = ""
+
+			//Getting the Items in Cart
+			cart := Cart{ID: users[i].Cart.ID}
+			DB.First(&cart).Related(&cart.Items, "Items")
+			fmt.Println(cart)
+			users[i].Cart.Items = cart.Items
 		}
+
 		return users, nil
 	}
 
@@ -156,6 +168,12 @@ var UpdateUser = &graphql.Field{
 		"RemoveOrder": &graphql.ArgumentConfig{
 			Type: graphql.Int,
 		},
+		"AddCart": &graphql.ArgumentConfig{
+			Type: graphql.Int,
+		},
+		"RemoveCart": &graphql.ArgumentConfig{
+			Type: graphql.Int,
+		},
 	},
 	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 
@@ -166,6 +184,8 @@ var UpdateUser = &graphql.Field{
 		name, _ := params.Args["Name"].(string)
 		addOrder, okao := params.Args["AddOrder"]
 		removeOrder, okro := params.Args["RemoveOrder"]
+		addCart, okac := params.Args["AddCart"]
+		removeCart, okrc := params.Args["RemoveCart"]
 
 		// perform mutation operation here
 		// for e.g. update the user and save to DB.
@@ -205,7 +225,20 @@ var UpdateUser = &graphql.Field{
 			}
 		}
 
-		DB.Update(&user)
+		if okac {
+			c := Cart{ID: uint(addCart.(int))}
+			DB.First(&c)
+			user.Cart = c
+		}
+
+		if okrc {
+			cart := Cart{}
+			DB.Where(removeCart.(int)).Find(&cart)
+			DB.Model(&user).Association("Cart").Delete(&user.Cart)
+			user.Cart = Cart{}
+		}
+
+		DB.Save(&user)
 
 		//Emptying the password
 		user.Password = ""

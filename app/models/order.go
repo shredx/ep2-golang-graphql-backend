@@ -15,7 +15,7 @@ type Order struct {
 	ID     uint      `gorm:"primary_key"`
 	Name   string    //The Order name to be displayed in the frontend
 	Items  []Item    `gorm:"foreign_key:OrderID"` //Items is the list of items in the cart
-	Total  float32   //Total price of items in the cart
+	Total  float64   //Total price of items in the cart
 	Date   time.Time //Date on which the order was made
 	UserID uint
 }
@@ -23,7 +23,7 @@ type Order struct {
 //OrderConfig is the config for the Order object
 var OrderConfig = graphql.ObjectConfig{
 	Name: "Order",
-	Fields: &graphql.Fields{
+	Fields: graphql.Fields{
 		"ID": &graphql.Field{
 			Type: graphql.Int,
 		},
@@ -64,6 +64,14 @@ var ReadOrder = &graphql.Field{
 			//Find the order from the DB
 			DB.First(&order).Related(&order.Items, "Items")
 		}
+		//Getting the Products
+		for i := 0; i < len(order.Items); i++ {
+			item := Item{ID: order.Items[i].ID}
+			//Getting the item from DB
+			DB.First(&item).Related(&item.Product, "Product")
+			order.Items[i].Product = item.Product
+		}
+
 		// return the new order object that we supposedly have in DB
 		return order, nil
 	},
@@ -99,10 +107,13 @@ var CreateOrder = &graphql.Field{
 		newOrder := Order{Name: name}
 
 		if okt {
-			newOrder.Total = total.(float32)
+			newOrder.Total = total.(float64)
 		}
 		if okd {
 			newOrder.Date = date.(time.Time)
+		} else {
+			//If Date not given then adding today's date
+			newOrder.Date = time.Now()
 		}
 
 		//Creating the Order in the DB
@@ -125,7 +136,7 @@ var UpdateOrderArgumentConfig = graphql.FieldConfigArgument{
 		Type: graphql.Float,
 	},
 	"Date": &graphql.ArgumentConfig{
-		Type: graphql.DateTime,
+		Type: graphql.NewNonNull(graphql.DateTime), //The format of DateTime at frontend is "2017-10-06T03:40:00.000Z"
 	},
 	"AddItem": &graphql.ArgumentConfig{
 		Type: graphql.Int,
@@ -146,23 +157,23 @@ var UpdateOrder = &graphql.Field{
 		id, _ := params.Args["ID"].(int)
 		name, okn := params.Args["Name"]
 		total, okt := params.Args["Total"]
-		date, okd := params.Args["Date"]
+		date, _ := params.Args["Date"]
 		addItem, okai := params.Args["AddItem"]
 		removeItem, okri := params.Args["RemoveItem"]
 
 		// perform mutation operation here
 		// will get the Order from db
 		// update the fields and update in the db
-		order := Order{ID: uint(id)}
+		order := Order{
+			ID:   uint(id),
+			Date: date.(time.Time),
+		}
 
 		if okn {
 			order.Name = name.(string)
 		}
 		if okt {
-			order.Total = total.(float32)
-		}
-		if okd {
-			order.Date = date.(time.Time)
+			order.Total = total.(float64)
 		}
 
 		//Getting all the items

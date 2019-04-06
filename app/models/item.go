@@ -12,7 +12,7 @@ import (
 type Item struct {
 	ID      uint    `gorm:"primary_key"`
 	Product Product `gorm:"foreign_key:ItemID"` //Product the item represents
-	Price   float32 //Price is the price of a single item
+	Price   float64 //Price is the price of a single item
 	Qty     int     //Qty is the number of items purchased
 	OrderID uint    //This is the foreign_key for Order.Items
 	CartID  uint    //This is the foreign_key for Cart.Items
@@ -21,7 +21,7 @@ type Item struct {
 //ItemConfig is the config for the Item object
 var ItemConfig = graphql.ObjectConfig{
 	Name: "Item",
-	Fields: &graphql.Fields{
+	Fields: graphql.Fields{
 		"ID": &graphql.Field{
 			Type: graphql.Int,
 		},
@@ -70,7 +70,7 @@ var ItemArgumentConfig = graphql.FieldConfigArgument{
 		Type: graphql.NewNonNull(graphql.Int),
 	},
 	"Price": &graphql.ArgumentConfig{
-		Type: graphql.NewNonNull(graphql.Float),
+		Type: graphql.Float,
 	},
 	"Qty": &graphql.ArgumentConfig{
 		Type: graphql.NewNonNull(graphql.Int),
@@ -86,18 +86,24 @@ var CreateItem = &graphql.Field{
 
 		// marshall and cast the argument value
 		p, _ := params.Args["Product"]
-		price, _ := params.Args["Price"]
+		price, okp := params.Args["Price"]
 		qty, _ := params.Args["Qty"]
 
 		// perform mutation operation here
 		// for e.g. create an Item and save to DB.
 		newItem := Item{
-			Price: price.(float32),
-			Qty:   qty.(int),
+			Qty: qty.(int),
 		}
 
 		//Getting the Product from the DB
 		DB.Where(p.(int)).Find(&newItem.Product)
+
+		//if price is given then use that or else use Product.Price
+		if okp {
+			newItem.Price = price.(float64)
+		} else {
+			newItem.Price = newItem.Product.Price
+		}
 
 		//Creating the Item in the DB
 		DB.Create(&newItem)
@@ -143,7 +149,7 @@ var UpdateItem = &graphql.Field{
 		item := Item{ID: uint(id)}
 
 		if okp {
-			item.Price = price.(float32)
+			item.Price = price.(float64)
 		}
 		if okq {
 			item.Qty = qty.(int)

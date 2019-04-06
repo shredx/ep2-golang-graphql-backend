@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/graphql-go/graphql"
+	"github.com/revel/revel"
 )
 
 //Schema is the graphql schema
@@ -44,13 +45,17 @@ var QueryConfig = graphql.ObjectConfig{
 		 */
 		"Categories": ReadCategories,
 		/*
-		 * curl -g 'http://localhost:9090/graphql?query={Order{ID:1}{ID,Name,Total}}'
+		 * curl -g 'http://localhost:9090/graphql?query={Order(ID:1){ID,Name,Total}}'
 		 */
 		"Order": ReadOrder,
 		/*
-		 * curl -g 'http://localhost:9090/graphql?query={Item{ID:101}{ID,Product{Name},Price}}'
+		 * curl -g 'http://localhost:9090/graphql?query={Item(ID:101){ID,Product{Name},Price}}'
 		 */
 		"Item": ReadItem,
+		/*
+		 * curl -g 'http://localhost:9090/graphql?query={Cart(ID:1){ID,Total}}'
+		 */
+		"Cart": ReadCart,
 	},
 }
 
@@ -99,17 +104,25 @@ var MutationConfig = graphql.ObjectConfig{
 		 */
 		"CreateOrder": CreateOrder,
 		/*
-		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateOrder(ID:111,Name:"Order1",AddItem:101){ID,Name,Items{ID}}}'
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateOrder(ID:1,Name:"Order1",AddItem:101){ID,Name,Items{ID}}}'
 		 */
 		"UpdateOrder": UpdateOrder,
 		/*
-		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateItem(Product:1,Price:300,Qty:2){ID,Price,Qty}}'
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateItem(Product:1,Qty:2){ID,Price,Qty}}'
 		 */
 		"CreateItem": CreateItem,
 		/*
-		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateItem(ID:111,Price:"400"){ID,Product{Name},Price}}'
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateItem(ID:1,Price:"400"){ID,Product{Name},Price}}'
 		 */
 		"UpdateItem": UpdateItem,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{CreateCart{ID}}'
+		 */
+		"CreateCart": CreateCart,
+		/*
+		 *	curl -g 'http://localhost:9090/graphql?query=mutation+_{UpdateCart(ID:1,AddItem:1){ID,Total}}'
+		 */
+		"UpdateCart": UpdateCart,
 	},
 }
 
@@ -122,11 +135,14 @@ func init() {
 	InitProduct()
 	InitCategories()
 
+	var err error
 	//Set the query and mutations
 	query := graphql.NewObject(QueryConfig)
 	mutation := graphql.NewObject(MutationConfig)
-	Schema, _ = graphql.NewSchema(graphql.SchemaConfig{
+	Schema, err = graphql.NewSchema(graphql.SchemaConfig{
 		Query:    query,
 		Mutation: mutation,
 	})
+	//Logging the error
+	revel.AppLog.Error("Error from GraphQL: ", err)
 }
