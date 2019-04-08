@@ -1,13 +1,14 @@
 package app
 
 import (
-	"encoding/json"
+	 //"encoding/json"
 	"net/http"
 
-	"github.com/graphql-go/graphql"
+    //"github.com/graphql-go/graphql"
 	"github.com/jinzhu/gorm"
 	"github.com/revel/revel"
 	"github.com/shredx/ep2-golang-graphql-backend/app/models"
+    "github.com/graphql-go/handler"
 
 	//initializing the mysql driver
 	_ "github.com/go-sql-driver/mysql"
@@ -102,6 +103,27 @@ func InitDB() {
 func StartGraphQL() {
 	//registering the handler with http
 	port := revel.Config.StringDefault("graphql.port", "9090")
+    h := handler.New(&handler.Config{
+        Schema :    &models.Schema,
+        Pretty:     true,
+        GraphiQL:   false,
+        Playground: true,
+    })
+    
+    fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/graphql" ,h)
+    http.Handle("/", fs)
+
+	revel.AppLog.Info("Now server is running on port", port)
+	revel.AppLog.Info("Test with Get      : curl -g 'http://localhost:" + port + "/graphql?query={hero{name}}'")
+	go http.ListenAndServe(":"+port, nil)
+}
+
+/*
+//StartGraphQL service will start the graphql server
+func StartGraphQL() {
+	//registering the handler with http
+	port := revel.Config.StringDefault("graphql.port", "9090")
 	http.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query().Get("query")
 		result := graphql.Do(graphql.Params{
@@ -114,3 +136,4 @@ func StartGraphQL() {
 	revel.AppLog.Info("Test with Get      : curl -g 'http://localhost:" + port + "/graphql?query={hero{name}}'")
 	go http.ListenAndServe(":"+port, nil)
 }
+*/
