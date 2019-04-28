@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+
 	"github.com/graphql-go/graphql"
 )
 
@@ -35,10 +37,33 @@ var UserConfig = graphql.ObjectConfig{
 			Type: graphql.String,
 		},
 		"Cart": &graphql.Field{
-			Type: CartSchema,
+			Type:        CartSchema,
+			Description: "Getting the cart",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				//Getting the user from source
+				user, ok := params.Source.(User)
+				if !ok {
+					return nil, nil
+				}
+				//Getting the Cart from the DB
+				DB.First(&user).Related(&user.Cart, "Cart")
+				return user.Cart, nil
+			},
 		},
 		"Orders": &graphql.Field{
-			Type: graphql.NewList(OrderSchema),
+			Type:        graphql.NewList(OrderSchema),
+			Description: "Getting the Order",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				//Getting the user from source
+				user, ok := params.Source.(User)
+				if !ok {
+					return nil, nil
+				}
+				//Getting the order list of the user from the DB
+				DB.Find(&user).Related(&user.Orders, "Orders")
+				fmt.Println(user.Orders)
+				return user.Orders, nil
+			},
 		},
 	},
 }
@@ -56,59 +81,15 @@ var ReadUserResolve = func(params graphql.ResolveParams) (interface{}, error) {
 	if !ok {
 		//return all the users
 		users := []User{}
+		//Getting all the users form DB
 		DB.Find(&users)
-		for i := 0; i < len(users); i++ {
-			DB.Find(&users[i]).Related(&users[i].Cart, "Cart").Related(&users[i].Orders, "Orders")
-			//Emptying the password
-			users[i].Password = ""
-
-			//Getting the Items in Cart
-			cart := Cart{ID: users[i].Cart.ID}
-			DB.First(&cart).Related(&cart.Items, "Items")
-			users[i].Cart.Items = cart.Items
-			for j := 0; j < len(users[i].Cart.Items); j++ {
-				item := Item{ID: users[i].Cart.Items[j].ID}
-				DB.First(&item).Related(&item.Product, "Product")
-				users[i].Cart.Items[j].Product = item.Product
-			}
-
-			//Getting Items in the Orders
-			for k := 0; k < len(users[i].Orders); i++ {
-				order := Order{ID: users[i].Orders[k].ID}
-				DB.First(&order).Related(&order.Items, "Items")
-				users[i].Orders[k].Items = order.Items
-				for l := 0; l < len(users[i].Orders[k].Items); l++ {
-					item := Item{ID: users[i].Orders[k].Items[l].ID}
-					DB.First(&item).Related(&item.Product, "Product")
-					users[i].Orders[k].Items[l].Product = item.Product
-				}
-			}
-		}
-
 		return users, nil
 	}
 
 	//finding the user from the db
-	DB.First(&user).Related(&user.Cart, "Cart").Related(&user.Orders, "Orders")
-	//Getting the Items in Cart
-	DB.First(&user.Cart).Related(&user.Cart.Items, "Items")
-	for i := 0; i < len(user.Cart.Items); i++ {
-		item := Item{ID: user.Cart.Items[i].ID}
-		DB.First(&item).Related(&item.Product, "Product")
-		user.Cart.Items[i].Product = item.Product
-	}
-	//Getting Items in the Orders
-	for i := 0; i < len(user.Orders); i++ {
-		DB.First(&user.Orders[i]).Related(&user.Orders[i].Items, "Items")
-		for j := 0; j < len(user.Orders[i].Items); j++ {
-			item := Item{ID: user.Orders[i].Items[j].ID}
-			DB.First(&item).Related(&item.Product, "Product")
-			user.Orders[i].Items[i].Product = item.Product
-		}
-	}
-
+	DB.First(&user)
 	//Emptying the password
-	user.Password = ""
+	//user.Password = ""
 
 	// return the new User object that we supposedly save to DB
 	return user, nil
@@ -162,10 +143,18 @@ var CreateUser = &graphql.Field{
 			Password: password,
 			Name:     name,
 		}
+
+		//Also Creating a Cart for the User
+		newCart := Cart{}
+		DB.Create(&newCart)
+		//Adding Cart to the user
+		newUser.Cart = newCart
+
+		//Creating the user in DB
 		DB.Create(&newUser)
 
 		//Emptying the password
-		newUser.Password = ""
+		//newUser.Password = ""
 
 		// return the new User object that we supposedly save to DB
 		return newUser, nil
@@ -268,7 +257,7 @@ var UpdateUser = &graphql.Field{
 		DB.Save(&user)
 
 		//Emptying the password
-		user.Password = ""
+		//user.Password = ""
 
 		// return the new User object that we supposedly save to DB
 		return user, nil

@@ -24,7 +24,17 @@ var CartConfig = graphql.ObjectConfig{
 			Type: graphql.Int,
 		},
 		"Items": &graphql.Field{
-			Type: graphql.NewList(ItemSchema),
+			Type:        graphql.NewList(ItemSchema),
+			Description: "Getting the list of items",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				//getting the source Cart
+				cart, ok := params.Source.(Cart)
+				if !ok {
+					return nil, nil
+				}
+				DB.First(&cart).Related(&cart.Items, "Items")
+				return cart.Items, nil
+			},
 		},
 		"Total": &graphql.Field{
 			Type: graphql.Float,
@@ -47,21 +57,11 @@ var ReadCart = &graphql.Field{
 	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 
 		//marshall and cast the argument value
-		id, ok := params.Args["ID"].(int)
+		id, _ := params.Args["ID"].(int)
 		cart := Cart{ID: uint(id)}
 
-		if ok {
-			//Find the order from the DB
-			DB.First(&cart).Related(&cart.Items, "Items")
-		}
-		//Getting the Products
-		for i := 0; i < len(cart.Items); i++ {
-			item := Item{ID: cart.Items[i].ID}
-			//Getting the item from DB
-			DB.First(&item).Related(&item.Product, "Product")
-			cart.Items[i].Product = item.Product
-		}
-		// return the new order object that we supposedly have in DB
+		DB.First(&cart)
+		// return the cart object read from DB
 		return cart, nil
 	},
 }

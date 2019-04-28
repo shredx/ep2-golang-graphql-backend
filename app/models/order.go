@@ -31,7 +31,18 @@ var OrderConfig = graphql.ObjectConfig{
 			Type: graphql.String,
 		},
 		"Items": &graphql.Field{
-			Type: graphql.NewList(ItemSchema),
+			Type:        graphql.NewList(ItemSchema),
+			Description: "Getting the list of items",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				//Getting the source Order
+				order, ok := params.Source.(Order)
+				if !ok {
+					return nil, nil
+				}
+				//Getting the Items from DB
+				DB.First(&order).Related(&order.Items, "Items")
+				return order.Items, nil
+			},
 		},
 		"Total": &graphql.Field{
 			Type: graphql.Float,
@@ -51,27 +62,16 @@ var ReadOrder = &graphql.Field{
 	Description: "Get a single Order and its detail",
 	Args: graphql.FieldConfigArgument{
 		"ID": &graphql.ArgumentConfig{
-			Type: graphql.Int,
+			Type: graphql.NewNonNull(graphql.Int),
 		},
 	},
 	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 
 		//marshall and cast the argument value
-		id, ok := params.Args["ID"].(int)
+		id, _ := params.Args["ID"].(int)
 		order := Order{ID: uint(id)}
-
-		if ok {
-			//Find the order from the DB
-			DB.First(&order).Related(&order.Items, "Items")
-		}
-		//Getting the Products
-		for i := 0; i < len(order.Items); i++ {
-			item := Item{ID: order.Items[i].ID}
-			//Getting the item from DB
-			DB.First(&item).Related(&item.Product, "Product")
-			order.Items[i].Product = item.Product
-		}
-
+		//Finding the order from DB
+		DB.First(&order)
 		// return the new order object that we supposedly have in DB
 		return order, nil
 	},

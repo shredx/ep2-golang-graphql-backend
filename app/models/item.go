@@ -26,7 +26,18 @@ var ItemConfig = graphql.ObjectConfig{
 			Type: graphql.Int,
 		},
 		"Product": &graphql.Field{
-			Type: graphql.NewNonNull(ProductSchema),
+			Type:        graphql.NewNonNull(ProductSchema),
+			Description: "Getting the Product",
+			Resolve: func(params graphql.ResolveParams) (interface{}, error) {
+				//getting the source Item
+				item, ok := params.Source.(Item)
+				if !ok {
+					return nil, nil
+				}
+				//getting the Product form DB
+				DB.First(&item).Related(&item.Product, "Product")
+				return item.Product, nil
+			},
 		},
 		"Price": &graphql.Field{
 			Type: graphql.Float,
@@ -46,20 +57,18 @@ var ReadItem = &graphql.Field{
 	Description: "Get a single Item and its detail",
 	Args: graphql.FieldConfigArgument{
 		"ID": &graphql.ArgumentConfig{
-			Type: graphql.Int,
+			Type: graphql.NewNonNull(graphql.Int),
 		},
 	},
 	Resolve: func(params graphql.ResolveParams) (interface{}, error) {
 
 		//marshall and cast the argument value
-		id, ok := params.Args["ID"].(int)
+		id, _ := params.Args["ID"].(int)
 		item := Item{ID: uint(id)}
 
-		if ok {
-			//Find the order from the DB
-			DB.First(&item).Related(&item.Product, "Product")
-		}
-		// return the new item object that we supposedly have in DB
+		//Find the item from the DB
+		DB.First(&item)
+		// return the item object that we have in DB
 		return item, nil
 	},
 }
