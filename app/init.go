@@ -1,7 +1,17 @@
 package app
 
 import (
+	 //"encoding/json"
+	"net/http"
+
+    //"github.com/graphql-go/graphql"
+	"github.com/jinzhu/gorm"
 	"github.com/revel/revel"
+	"github.com/shredx/ep2-golang-graphql-backend/app/models"
+    "github.com/graphql-go/handler"
+
+	//initializing the mysql driver
+	_ "github.com/go-sql-driver/mysql"
 )
 
 var (
@@ -34,8 +44,8 @@ func init() {
 	// revel.DevMode and revel.RunMode only work inside of OnAppStart. See Example Startup Script
 	// ( order dependent )
 	// revel.OnAppStart(ExampleStartupScript)
-	// revel.OnAppStart(InitDB)
-	// revel.OnAppStart(FillCache)
+	revel.OnAppStart(InitDB)
+	revel.OnAppStart(StartGraphQL)
 }
 
 // HeaderFilter adds common security headers
@@ -57,3 +67,73 @@ var HeaderFilter = func(c *revel.Controller, fc []revel.Filter) {
 //		// Dev mode
 //	}
 //}
+
+//InitDB inits the database and tables.
+//This function will migrate the existing tables
+func InitDB() {
+	/*
+		Will connect to the database
+		Will automigrate the following tables
+	*/
+	//Connecting to the database
+	driver := revel.Config.StringDefault("db.driver", "mysql")
+	connectString := revel.Config.StringDefault("db.connect", "root:root@locahost/test")
+
+	Db, err := gorm.Open(driver, connectString)
+	if err != nil {
+		revel.AppLog.Error("Error while connecting to the DB", err.Error())
+		return
+	}
+
+	models.DB = Db
+
+	//automigrating the tables
+	models.DB.AutoMigrate(&models.User{})
+	models.DB.AutoMigrate(&models.Review{})
+	models.DB.AutoMigrate(&models.Tag{})
+	models.DB.AutoMigrate(&models.Product{})
+	models.DB.AutoMigrate(&models.Category{})
+	models.DB.AutoMigrate(&models.Item{})
+	models.DB.AutoMigrate(&models.Order{})
+	models.DB.AutoMigrate(&models.Cart{})
+
+}
+
+//StartGraphQL service will start the graphql server
+func StartGraphQL() {
+	//registering the handler with http
+	port := revel.Config.StringDefault("graphql.port", "9090")
+    h := handler.New(&handler.Config{
+        Schema :    &models.Schema,
+        Pretty:     true,
+        GraphiQL:   false,
+        Playground: true,
+    })
+    
+    fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/graphql" ,h)
+    http.Handle("/", fs)
+
+	revel.AppLog.Info("Now server is running on port", port)
+	revel.AppLog.Info("Test with Get      : curl -g 'http://localhost:" + port + "/graphql?query={hero{name}}'")
+	go http.ListenAndServe(":"+port, nil)
+}
+
+/*
+//StartGraphQL service will start the graphql server
+func StartGraphQL() {
+	//registering the handler with http
+	port := revel.Config.StringDefault("graphql.port", "9090")
+	http.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
+		query := r.URL.Query().Get("query")
+		result := graphql.Do(graphql.Params{
+			Schema:        models.Schema,
+			RequestString: query,
+		})
+		json.NewEncoder(w).Encode(result)
+	})
+	revel.AppLog.Info("Now server is running on port", port)
+	revel.AppLog.Info("Test with Get      : curl -g 'http://localhost:" + port + "/graphql?query={hero{name}}'")
+	go http.ListenAndServe(":"+port, nil)
+}
+*/
